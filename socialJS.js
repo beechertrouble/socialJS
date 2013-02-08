@@ -1,19 +1,74 @@
 /**
-* v. 3.5
+* v. 3.6
 * 
 */
-var SOCIAL = function(target, URL, IMG) {
+var socialJS = function(target, parseNow, args) {
 	
-	this.target = target;
-	this.URL = URL === undefined || !URL ? window.location.href : URL;
-	this.IMG = target !== undefined && target.attr('data-image') !== undefined && IMG === undefined ? target.attr('data-image') : IMG;
+	this.args = args === undefined ? {} : args;
+	
+	this.target = target; // REQUIRED
+	this.parseNow = parseNow === undefined ? true : parseNow;
+	this.URL = window.location.href; 
+	this.IMG = undefined; 
 		
 	this.showCount = false;
 	this.lang = 'en_US';
 	this.description = false;
 	
-	this.which = ['facebook', 'twitter', 'googleplus', 'pinterest', 'tumblr'];
+	this.which = ['facebook', 'twitter', 'googleplus', 'pinterest', 'tumblr']; // all of 'em
 	
+	// setup
+	this.setup = function() {
+		
+		var S = this;
+		
+		// which
+		S.getWhich();
+		
+		// URL
+		var tryURL = S.target.attr('data-url') === undefined ? S.args.URL : S.target.attr('data-url'); // from html or js args
+		S.URL = tryURL === undefined ? S.URL : tryURL; 
+			
+		// IMG
+		var tryIMG = S.target.attr('data-image') === undefined ? S.args.IMG : S.target.attr('data-image'); // from html or js args
+		S.IMG = tryIMG === undefined ? S.IMG : tryIMG; 
+		
+		// showCount
+		var tryShowCount = S.target.attr('data-showcount') === undefined ? S.args.showCount : S.target.attr('data-showcount'); // from html or js args
+		S.showCount = tryShowCount === undefined ? S.showCount : tryShowCount; 
+		
+		// lang
+		var tryLang = S.target.attr('data-lang') === undefined ? S.args.lang : S.target.attr('data-lang'); // from html or js args
+		S.lang = tryLang === undefined ? S.lang : tryLang;
+		
+		// lang
+		var tryDesc = S.target.attr('data-description') === undefined ? S.args.description : S.target.attr('data-description'); // from html or js args
+		S.description = tryDesc === undefined ? S.description : tryDesc;
+		
+		// parsenow?
+		if(S.parseNow)
+			S.parseEm();
+		
+	} //
+	this.getWhich = function() {
+		
+		var S = this,
+			current = S.which,
+			which = [];
+		
+		for(var i=0;i<current.length;i++) {
+		
+			var thisOne = current[i].toLowerCase().replace(/[^a-z0-9]/g, ""),
+				whichClass = "." + thisOne + '_wrap';
+			
+			if(S.target.find(whichClass).length	 > 0)
+				which.push(thisOne);
+			
+			if(i == (S.which.length -1))
+				S.which = which;
+		}
+		
+	} //
 	this.facebook = {
 		
 		send : false,
@@ -62,7 +117,7 @@ var SOCIAL = function(target, URL, IMG) {
 				  var js, fjs = d.getElementsByTagName(s)[0];
 				  if (d.getElementById(id)) return;
 				  js = d.createElement(s); js.id = id;
-				  js.src = "//connect.facebook.net/" + SOC.lang + "/all.js#xfbml=0"; //"/all.js#xfbml=1";
+				  js.src = "//connect.facebook.net/" + SOC.lang + "/all.js#xfbml=1";
 				  fjs.parentNode.insertBefore(js, fjs);
 				}(document, 'script', 'facebook-jssdk'));
 			
@@ -77,7 +132,7 @@ var SOCIAL = function(target, URL, IMG) {
 			if(typeof FB !== 'undefined') {
 				FB.XFBML.parse();
 			} else {
-				setTimeout(function() { S.facebook.canIparse(); }, 1000);
+				setTimeout(function() { S.facebook.canIparse(); }, 900);
 			}
 
 		}
@@ -150,15 +205,11 @@ var SOCIAL = function(target, URL, IMG) {
 			
 			},
 		parse : function(S) {
-				/**
-				console.log('gapi', typeof gap);
-				console.log('window.gapi', typeof window.gap);
-				gapi.plusone.go();
-				*/
+				
 												
 				if(typeof gapi !== 'undefined') { // && typeof window.googleapis !== 'undefined'
 
-					gapi.plusone.go();
+					setTimeout(function() { gapi.plusone.go(); }, 600);
 
 				} else {
 				
@@ -226,7 +277,7 @@ for(l=k.length;e<l;e+=1)k[e].href&&k[e].href.indexOf(c.button)!==-1&&s(k[e])})(d
 						
 		for(var i=0;i<S.which.length;i++) {
 			
-			var which = S.which[i].toLowerCase().replace(/[^a-z0-9]/g, "");
+			var which = S.which[i];
 			
 			if(!(($.browser !== undefined && $.browser.msie && parseInt($.browser.version, 10) === 7) && which == 'googleplus'))
 				S[which].html(S);
@@ -246,7 +297,7 @@ for(l=k.length;e<l;e+=1)k[e].href&&k[e].href.indexOf(c.button)!==-1&&s(k[e])})(d
 			
 			for(var i=0;i<S.which.length;i++) {
 			
-				var which = S.which[i].toLowerCase().replace(/[^a-z0-9]/g, "");
+				var which = S.which[i];
 								
 				if(!(($.browser !== undefined && $.browser.msie && parseInt($.browser.version, 10) === 7) && which == 'googleplus'))
 					S[which].script(S);
@@ -270,7 +321,7 @@ for(l=k.length;e<l;e+=1)k[e].href&&k[e].href.indexOf(c.button)!==-1&&s(k[e])})(d
 			case('loaded'):
 				for(var i=0;i<S.which.length;i++) {
 				
-					var which = S.which[i].toLowerCase().replace(/[^a-z0-9]/g, "");
+					var which = S.which[i];
 								
 					if(!(($.browser !== undefined && $.browser.msie && parseInt($.browser.version, 10) === 7) && which == 'googleplus'))
 						S[which].parse(S);
@@ -297,11 +348,13 @@ for(l=k.length;e<l;e+=1)k[e].href&&k[e].href.indexOf(c.button)!==-1&&s(k[e])})(d
 		var S = this;
 		
 		S.URL = newURL;
-		S.target.children(".socail_wrap").empty();
+		S.target.find(".socail_wrap").empty();
 		S.init();
 		S.parseEm();
 		
 	} //
 
+
+	this.setup();
 
 }
