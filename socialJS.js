@@ -22,32 +22,36 @@ var socialJS = function(target, parseNow, args) {
 		
 		var S = this;
 		
-		// which
-		S.getWhich();
-		
-		// URL
-		var tryURL = S.target.attr('data-url') === undefined ? S.args.URL : S.target.attr('data-url'); // from html or js args
-		S.URL = tryURL === undefined ? S.URL : tryURL; 
+		if(S.target !== undefined) {
 			
-		// IMG
-		var tryIMG = S.target.attr('data-image') === undefined ? S.args.IMG : S.target.attr('data-image'); // from html or js args
-		S.IMG = tryIMG === undefined ? S.IMG : tryIMG; 
-		
-		// showCount
-		var tryShowCount = S.target.attr('data-showcount') === undefined ? S.args.showCount : S.target.attr('data-showcount'); // from html or js args
-		S.showCount = tryShowCount === undefined ? S.showCount : tryShowCount; 
-		
-		// lang
-		var tryLang = S.target.attr('data-lang') === undefined ? S.args.lang : S.target.attr('data-lang'); // from html or js args
-		S.lang = tryLang === undefined ? S.lang : tryLang;
-		
-		// lang
-		var tryDesc = S.target.attr('data-description') === undefined ? S.args.description : S.target.attr('data-description'); // from html or js args
-		S.description = tryDesc === undefined ? S.description : tryDesc;
-		
-		// parsenow?
-		if(S.parseNow)
-			S.parseEm();
+			// which
+			S.getWhich();
+			
+			// URL
+			var tryURL = S.target.attr('data-url') === undefined ? S.args.URL : S.target.attr('data-url'); // from html or js args
+			S.URL = tryURL === undefined ? S.URL : tryURL; 
+				
+			// IMG
+			var tryIMG = S.target.attr('data-image') === undefined ? S.args.IMG : S.target.attr('data-image'); // from html or js args
+			S.IMG = tryIMG === undefined ? S.IMG : tryIMG; 
+			
+			// showCount
+			var tryShowCount = S.target.attr('data-showcount') === undefined ? S.args.showCount : S.target.attr('data-showcount'); // from html or js args
+			S.showCount = tryShowCount === undefined ? S.showCount : tryShowCount; 
+			
+			// lang
+			var tryLang = S.target.attr('data-lang') === undefined ? S.args.lang : S.target.attr('data-lang'); // from html or js args
+			S.lang = tryLang === undefined ? S.lang : tryLang;
+			
+			// lang
+			var tryDesc = S.target.attr('data-description') === undefined ? S.args.description : S.target.attr('data-description'); // from html or js args
+			S.description = tryDesc === undefined ? S.description : tryDesc;
+			
+			// parsenow?
+			if(S.parseNow)
+				S.parseEm();
+				
+		}
 		
 	} //
 	this.getWhich = function() {
@@ -209,7 +213,7 @@ var socialJS = function(target, parseNow, args) {
 												
 				if(typeof gapi !== 'undefined') { // && typeof window.googleapis !== 'undefined'
 
-					setTimeout(function() { gapi.plusone.go(); }, 600);
+					setTimeout(function() { gapi.plusone.go(); }, 700);
 
 				} else {
 				
