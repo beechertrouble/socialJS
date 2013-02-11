@@ -7,17 +7,19 @@ var socialJS = function(target, parseNow, args) {
 	this.args = args === undefined ? {} : args;
 	
 	this.target = target; // REQUIRED
+	
+	// some global settings ...
 	this.parseNow = parseNow === undefined ? true : parseNow;
 	this.URL = window.location.href; 
 	this.IMG = undefined; 
-		
 	this.showCount = false;
 	this.lang = 'en_US';
 	this.description = false;
-	
 	this.which = ['facebook', 'twitter', 'googleplus', 'pinterest', 'tumblr']; // all of 'em
 	
-	// setup
+	/**
+	* setup based on js args > html data-attr > defaults
+	*/
 	this.setup = function() {
 		
 		var S = this;
@@ -43,17 +45,21 @@ var socialJS = function(target, parseNow, args) {
 			var tryLang = S.target.attr('data-lang') === undefined ? S.args.lang : S.target.attr('data-lang'); // from html or js args
 			S.lang = tryLang === undefined ? S.lang : tryLang;
 			
-			// lang
+			// Description
 			var tryDesc = S.target.attr('data-description') === undefined ? S.args.description : S.target.attr('data-description'); // from html or js args
 			S.description = tryDesc === undefined ? S.description : tryDesc;
 			
 			// parsenow?
 			if(S.parseNow)
 				S.parseEm();
-				
+								
 		}
 		
 	} //
+	
+	/**
+	* build array of which based on container divs .social_wrap
+	*/
 	this.getWhich = function() {
 		
 		var S = this,
@@ -73,6 +79,115 @@ var socialJS = function(target, parseNow, args) {
 		}
 		
 	} //
+	
+	/**
+	*  add the JS for each SN --> should only do this once ... pinterest might be an exception because it's dumb
+	*/
+	this.getScripts = function() {
+		
+		var S = this;
+		
+		if(window.socialScriptsStatus === undefined) { // don't load 'em twice!
+		
+			window.socialScriptsStatus = 'loading';
+			
+			for(var i=0;i<S.which.length;i++) {
+			
+				var which = S.which[i];
+								
+				if(!(($.browser !== undefined && $.browser.msie && parseInt($.browser.version, 10) === 7) && which == 'googleplus'))
+					S[which].script(S);
+				
+				if(i == (S.which.length -1)) {
+					window.socialScriptsStatus = 'loaded';	
+					$("body").addClass('social_scripts_loaded');
+				}
+				
+			}
+		}
+	} //
+	
+	/**
+	* adds the required html for each social network
+	*/
+	this.init = function(S) { 
+	
+		var S = S === undefined ? this : S;
+								
+		for(var i=0;i<S.which.length;i++) {
+			
+			var which = S.which[i];
+			
+			if(!(($.browser !== undefined && $.browser.msie && parseInt($.browser.version, 10) === 7) && which == 'googleplus'))
+				S[which].html(S);
+		
+			if(i == (S.which.length - 1))
+				S.target.addClass('social_inited');
+		}
+		
+	} //
+	
+	/**
+	* this asks the JS for each SN to parse the HTML we added in the init call
+	*/
+	this.parseEm = function(S) {
+				
+		var S = S === undefined ? this : S;
+				
+		if(!S.target.is('.social_inited')) 
+			S.init(S);
+		
+		switch(window.socialScriptsStatus) {
+			
+			case('loaded'):
+				for(var i=0;i<S.which.length;i++) {
+				
+					var which = S.which[i];
+								
+					if(!(($.browser !== undefined && $.browser.msie && parseInt($.browser.version, 10) === 7) && which == 'googleplus'))
+						S[which].parse(S);
+				
+				}
+				break;
+				
+			case('loading'):
+				setTimeout(function() { S.parseEm(); }, 500);
+				break;
+				
+			case(undefined):
+			default:
+				S.getScripts();
+				setTimeout(function() { S.parseEm(); }, 750);
+				break;
+			
+		}
+		
+	
+	} //
+	
+	/**
+	* want to socialize a different url (or img, or desc) in the same spot?
+	*/
+	this.rebuild = function(newURL, newIMG, newDesc) {
+		
+		var S = this;
+		
+		// override
+		S.URL = newURL;
+		S.IMG = newIMG === undefined ? S.IMG : newIMG;
+		S.description = newDesc === undefined ? S.description : newDesc;
+		
+		// emtpy and rebuild
+		S.target.find(".social_wrap").empty();
+		S.init(S);
+		S.parseEm();
+		
+	} //
+	
+	/* 
+	* >=======================> jam some setup and utilities for each social plugin .... <===============<
+	*/
+		
 	this.facebook = {
 		
 		send : false,
@@ -211,9 +326,9 @@ var socialJS = function(target, parseNow, args) {
 		parse : function(S) {
 				
 												
-				if(typeof gapi !== 'undefined') { // && typeof window.googleapis !== 'undefined'
+				if(typeof gapi !== 'undefined') { // && typeof window.googleapis !== 'undefined' <- that bug is only when firebug is disabled
 
-					setTimeout(function() { gapi.plusone.go(); }, 900); // having to put a stupid delay on this to deal with the intermittant window.googleapis error ... 
+					gapi.plusone.go();
 
 				} else {
 				
@@ -239,9 +354,7 @@ var socialJS = function(target, parseNow, args) {
 				$.getScript('http://platform.tumblr.com/v1/share.js');
 			
 			},
-		parse : function(S) {
-			
-		}
+		parse : function(S) {}
 		
 	} //
 	this.pinterest = {
@@ -249,16 +362,16 @@ var socialJS = function(target, parseNow, args) {
 		layout : false,
 		description : false,
 		html : function(S) {
-				
+								
 				if(S.IMG !== undefined) {
-				
-					var layout = S.pinterest.layout ? ' count-layout="' + S.pinterest.layout + '" ' : ' count-layout="horizontal" ';
-					var count = S.showCount ? layout : ' count-layout="none" ';
-					var media = S.IMG !== undefined ? '&media=' + encodeURIComponent( media ) : '';
-					var gobalText = S.description ?  '&description=' + encodeURIComponent( S.description ) : '';
-					var desc = S.pinterest.description ? '&description=' + encodeURIComponent( S.pinterest.description ) : gobalText;
-					var theHTML = '<a href="http://pinterest.com/pin/create/button/?url=' + encodeURIComponent( S.URL ) + media + '" class="pin-it-button" ' + count + '><img border="0" src="//assets.pinterest.com/images/PinExt.png" title="Pin It" /></a>'; 
-					
+								
+					var layout = S.pinterest.layout ? ' count-layout="' + S.pinterest.layout + '" ' : ' count-layout="horizontal" ',
+						count = S.showCount ? layout : ' count-layout="none" ',
+						media = S.IMG !== undefined && S.IMG != 'undefined' ? '&media=' + encodeURIComponent( S.IMG ) : '',
+						gobalText = S.description ?  '&description=' + encodeURIComponent( S.description ) : '',
+						desc = S.pinterest.description ? '&description=' + encodeURIComponent( S.pinterest.description ) : gobalText,
+						theHTML = '<a href="http://pinterest.com/pin/create/button/?url=' + encodeURIComponent( S.URL ) + media + '" class="pin-it-button" ' + count + '><img border="0" src="//assets.pinterest.com/images/PinExt.png" title="Pin It" /></a>'; 
+										
 					S.target.find(".pinterest_wrap").html(theHTML).addClass('social_inited');
 				
 				}
@@ -267,102 +380,24 @@ var socialJS = function(target, parseNow, args) {
 		script : function(S) {
 				S.pinterest.parse(S);
 			},
-		parse : function(S) {
-						
-			if(S.IMG !== undefined) {
+		parse : function(SOC) {
+			
+			if(SOC.IMG !== undefined) {
 			
 				(function(m,q,c){var s=function(h){var d=c.pinit,n="?",a,i,f,b;f=[];b=[];var j={},g=m.createElement("IFRAME"),r=h.getAttribute(c.att.count)||false,o=h.getAttribute(c.att.layout)||"horizontal";if(q.location.protocol==="https:")d=c.pinit_secure;f=h.href.split("?")[1].split("#")[0].split("&");a=0;for(i=f.length;a<i;a+=1){b=f[a].split("=");j[b[0]]=b[1]}a=f=0;for(i=c.vars.req.length;a<i;a+=1){b=c.vars.req[a];if(j[b]){d=d+n+b+"="+j[b];n="&"}f+=1}if(j.media&&j.media.indexOf("http")!==0)f=0;if(f===i){a=0;
 	for(i=c.vars.opt.length;a<i;a+=1){b=c.vars.opt[a];if(j[b])d=d+n+b+"="+j[b]}d=d+"&layout="+o;d=d+"&ref="+encodeURIComponent(m.URL);if(r!==false)d+="&count=1";g.setAttribute("src",d);g.setAttribute("scrolling","no");g.allowTransparency=true;g.frameBorder=0;g.style.border="none";g.style.width=c.layout[o].width+"px";g.style.height=c.layout[o].height+"px";h.parentNode.replaceChild(g,h)}else h.parentNode.removeChild(h)},p=m.getElementsByTagName("A"),l,e,k=[];e=0;for(l=p.length;e<l;e+=1)k.push(p[e]);e=0;
 	for(l=k.length;e<l;e+=1)k[e].href&&k[e].href.indexOf(c.button)!==-1&&s(k[e])})(document,window,{att:{layout:"count-layout",count:"always-show-count"},pinit:"http://pinit-cdn.pinterest.com/pinit.html",pinit_secure:"https://assets.pinterest.com/pinit.html",button:"//pinterest.com/pin/create/button/?",vars:{req:["url","media"],opt:["title","description"]},layout:{none:{width:43,height:20},vertical:{width:43,height:58},horizontal:{width:90,height:20}}});
-	
+								
 			}
 			
 		}
 		
 	} //
-
-	this.init = function(S) {
-								
-		for(var i=0;i<S.which.length;i++) {
-			
-			var which = S.which[i];
-			
-			if(!(($.browser !== undefined && $.browser.msie && parseInt($.browser.version, 10) === 7) && which == 'googleplus'))
-				S[which].html(S);
-		
-			if(i == (S.which.length - 1))
-				S.target.addClass('social_inited');
-		}
-		
-	} //
-	this.getScripts = function() {
-		
-		var S = this;
-		
-		if(window.socialScriptsStatus === undefined) { // don't load 'em twice!
-		
-			window.socialScriptsStatus = 'loading';
-			
-			for(var i=0;i<S.which.length;i++) {
-			
-				var which = S.which[i];
-								
-				if(!(($.browser !== undefined && $.browser.msie && parseInt($.browser.version, 10) === 7) && which == 'googleplus'))
-					S[which].script(S);
-				
-				if(i == (S.which.length -1)) {
-					window.socialScriptsStatus = 'loaded';	
-					$("body").addClass('social_scripts_loaded');
-				}
-			}
-		}
-	} //
-	this.parseEm = function(S) {
-				
-		var S = S === undefined ? this : S;
-				
-		if(!S.target.is('.social_inited')) 
-			S.init(S);
-		
-		switch(window.socialScriptsStatus) {
-			
-			case('loaded'):
-				for(var i=0;i<S.which.length;i++) {
-				
-					var which = S.which[i];
-								
-					if(!(($.browser !== undefined && $.browser.msie && parseInt($.browser.version, 10) === 7) && which == 'googleplus'))
-						S[which].parse(S);
-				
-				}
-				break;
-				
-			case('loading'):
-				setTimeout(function() { S.parseEm(); }, 500);
-				break;
-				
-			case(undefined):
-			default:
-				S.getScripts();
-				setTimeout(function() { S.parseEm(); }, 750);
-				break;
-			
-		}
-		
 	
-	} //
-	this.newURL = function(newURL) {
-		
-		var S = this;
-		
-		S.URL = newURL;
-		S.target.find(".socail_wrap").empty();
-		S.init(S);
-		S.parseEm();
-		
-	} //
 
-
+	/**
+	* run the setup on definition
+	*/
 	this.setup();
 
 }
