@@ -173,7 +173,7 @@ var socialJS = function(target, parseNow, args) {
 		var S = this;
 		
 		// override
-		S.URL = newURL;
+		S.URL = newURL === undefined ? S.URL : newURL;
 		S.IMG = newIMG === undefined ? S.IMG : newIMG;
 		S.description = newDesc === undefined ? S.description : newDesc;
 		
