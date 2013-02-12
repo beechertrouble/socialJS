@@ -83,28 +83,44 @@ var socialJS = function(target, parseNow, args) {
 	/**
 	*  add the JS for each SN --> should only do this once ... pinterest might be an exception because it's dumb
 	*/
-	this.getScripts = function() {
+	this.getScripts = function(S, thisOne) {
 		
-		var S = this;
+		var S = S === undefined ? this : S;
 		
-		if(window.socialScriptsStatus === undefined) { // don't load 'em twice!
+		if(window.socialScriptsStatus === undefined)
+			window.socialScriptsStatus = {};
 		
-			window.socialScriptsStatus = 'loading';
-			
+		if(thisOne == undefined) {
+						
 			for(var i=0;i<S.which.length;i++) {
-			
-				var which = S.which[i];
-								
-				if(!(($.browser !== undefined && $.browser.msie && parseInt($.browser.version, 10) === 7) && which == 'googleplus'))
-					S[which].script(S);
 				
-				if(i == (S.which.length -1)) {
-					window.socialScriptsStatus = 'loaded';	
-					$("body").addClass('social_scripts_loaded');
-				}
+				var which = S.which[i];
+				
+				S.tryScript(S, which);
 				
 			}
+			
+		} else {
+			
+			S.tryScript(S, thisOne);
+			
 		}
+		
+	} //
+	
+	this.tryScript = function(S, thisOne) {
+		
+		if(window.socialScriptsStatus[thisOne] === undefined) {
+		
+			window.socialScriptsStatus[thisOne] = 'loading';
+						
+			if(!(($.browser !== undefined && $.browser.msie && parseInt($.browser.version, 10) === 7) && thisOne == 'googleplus'))
+				S[thisOne].script(S);
+			
+			window.socialScriptsStatus[thisOne] = 'loaded';
+			
+		}
+		
 	} //
 	
 	/**
@@ -130,39 +146,56 @@ var socialJS = function(target, parseNow, args) {
 	/**
 	* this asks the JS for each SN to parse the HTML we added in the init call
 	*/
-	this.parseEm = function(S) {
+	this.parseEm = function(S, thisOne) {
 				
 		var S = S === undefined ? this : S;
 				
 		if(!S.target.is('.social_inited')) 
 			S.init(S);
+			
+		if(window.socialScriptsStatus === undefined) {
+			
+			S.getScripts(S);
+			setTimeout(function() { S.parseEm(S); }, 750);
+			
+		} else if(thisOne === undefined) {
 		
-		switch(window.socialScriptsStatus) {
+			for(var i=0;i<S.which.length;i++) {
+					
+				var which = S.which[i];
+				
+				S.tryParse(S, which);
+			
+			}
+			
+		} else {
+			
+			S.tryParse(S, thisOne);
+			
+		}
+	} //
+	
+	this.tryParse = function(S, thisOne) {
+		
+		switch(window.socialScriptsStatus[thisOne]) {
 			
 			case('loaded'):
-				for(var i=0;i<S.which.length;i++) {
-				
-					var which = S.which[i];
-								
-					if(!(($.browser !== undefined && $.browser.msie && parseInt($.browser.version, 10) === 7) && which == 'googleplus'))
-						S[which].parse(S);
-				
-				}
+				if(!(($.browser !== undefined && $.browser.msie && parseInt($.browser.version, 10) === 7) && thisOne == 'googleplus'))
+					S[thisOne].parse(S);
 				break;
 				
 			case('loading'):
-				setTimeout(function() { S.parseEm(); }, 500);
+				setTimeout(function() { S.tryParse(S, thisOne); }, 500);
 				break;
 				
 			case(undefined):
 			default:
-				S.getScripts();
-				setTimeout(function() { S.parseEm(); }, 750);
+				S.getScripts(S, thisOne);
+				setTimeout(function() { S.tryParse(S, thisOne); }, 750);
 				break;
 			
 		}
 		
-	
 	} //
 	
 	/**
