@@ -1,5 +1,5 @@
 /**
-* v. 3.7
+* v. 3.8
 * 
 */
 var socialJS = function(target, parseNow, args) {
@@ -10,12 +10,18 @@ var socialJS = function(target, parseNow, args) {
 	
 	// some global settings ...
 	this.parseNow = parseNow === undefined ? true : parseNow;
-	this.URL = window.location.href; 
-	this.IMG = undefined; 
-	this.showCount = false;
-	this.lang = 'en_US';
-	this.description = false;
+	this.URL = this.args.URL !== undefined ? this.args.URL : window.location.href; 
+	this.IMG = this.args.IMG !== undefined ? this.args.IMG : undefined; 
+	this.showCount = this.args.showCount !== undefined ? this.args.showCount : false;
+	this.lang = this.args.lang !== undefined ? this.args.lang : 'en_US'; 
+	this.description = this.args.description !== undefined ? this.args.description : false;
 	this.which = ['facebook', 'twitter', 'googleplus', 'pinterest', 'tumblr']; // all of 'em
+	
+	// some specifics
+	this.FBargs = this.args.FBargs !== undefined ? this.args.FBargs : {};
+	this.TWargs = this.args.TWargs !== undefined ? this.args.TWargs : {};
+	this.GPargs = this.args.GPargs !== undefined ? this.args.GPargs : {};
+	this.PTargs = this.args.PTargs !== undefined ? this.args.PTargs : {};
 	
 	/**
 	* setup based on js args > html data-attr > defaults
@@ -44,6 +50,7 @@ var socialJS = function(target, parseNow, args) {
 			// lang
 			var tryLang = S.target.attr('data-lang') === undefined ? S.args.lang : S.target.attr('data-lang'); // from html or js args
 			S.lang = tryLang === undefined ? S.lang : tryLang;
+			S.translateLang();
 			
 			// Description
 			var tryDesc = S.target.attr('data-description') === undefined ? S.args.description : S.target.attr('data-description'); // from html or js args
@@ -54,6 +61,22 @@ var socialJS = function(target, parseNow, args) {
 				S.parseEm();
 								
 		}
+		
+	} //
+	
+	/**
+	* translate language : i.e. translate 'en' to 'en_US' ...
+	*/
+	this.translateLang = function(lang, whichVersion) {
+			
+		var tryLang = lang !== undefined ? lang : this.lang,
+			wV = whichVersion !== undefined ? whichVersion : 'fb',
+			rosetta = {
+				'en' : {'fb' : 'en_US'}, 
+				'fr' : {'fb' : 'fr_FR'}
+			};
+		
+		this.lang = rosetta[tryLang] !== undefined ? rosetta[tryLang][wV] : this.lang;
 		
 	} //
 	
@@ -71,7 +94,7 @@ var socialJS = function(target, parseNow, args) {
 			var thisOne = current[i].toLowerCase().replace(/[^a-z0-9]/g, ""),
 				whichClass = "." + thisOne + '_wrap';
 			
-			if(S.target.find(whichClass).length	 > 0)
+			if(S.target.find(whichClass).length > 0)
 				which.push(thisOne);
 			
 			if(i == (S.which.length -1))
@@ -113,7 +136,7 @@ var socialJS = function(target, parseNow, args) {
 		if(window.socialScriptsStatus[thisOne] === undefined) {
 		
 			window.socialScriptsStatus[thisOne] = 'loading';
-						
+									
 			if(!(($.browser !== undefined && $.browser.msie && parseInt($.browser.version, 10) === 7) && thisOne == 'googleplus'))
 				S[thisOne].script(S);
 			
@@ -222,19 +245,20 @@ var socialJS = function(target, parseNow, args) {
 	*/
 		
 	this.facebook = {
-		
-		send : false,
-		layout : 'button_count', // standard | button_count | box_count 
-		width : false,
-		faces : false,
-		action : 'like', // like | recommend
-		colorscheme : 'light', // light | dark
+				
+		send : this.FBargs.send !== undefined ? this.FBargs.send : false, // only | true (both) | false (only like)
+		layout : this.FBargs.layout !== undefined ? this.FBargs.layout : 'button_count', // standard | button_count | box_count 
+		width : this.FBargs.width !== undefined ? this.FBargs.width : false,
+		faces : this.FBargs.faces !== undefined ? this.FBargs.faces : false,
+		action : this.FBargs.action !== undefined ? this.FBargs.action : 'like', // like | recommend
+		colorscheme : this.FBargs.colorscheme !== undefined ? this.FBargs.colorscheme : 'light', // light | dark
 		html : function(S) {
-								
-				var send = ' data-send="' + S.facebook.send + '" ';
-				var layout = ' data-layout="' + S.facebook.layout + '" ';
-				var action = ' data-action="' + S.facebook.action + '" ';
-				var faces = ' data-show-faces="' + S.facebook.faces + '" ';
+				
+				// turn settings into attr strings ...
+				var send = S.facebook.send == 'only' ? '' : ' data-send="' + S.facebook.send + '" ';
+				var layout = S.facebook.send == 'only' ? '' : ' data-layout="' + S.facebook.layout + '" ';
+				var action = S.facebook.send == 'only' ? '' : ' data-action="' + S.facebook.action + '" ';
+				var faces = S.facebook.send == 'only' ? '' : ' data-show-faces="' + S.facebook.faces + '" ';
 				var colorscheme = ' data-colorscheme="' + S.facebook.colorscheme + '" ';
 				var width = '';
 				
@@ -255,21 +279,25 @@ var socialJS = function(target, parseNow, args) {
 				
 				width = S.facebook.width ? ' data-width="' + S.facebook.width + '" ' : ' data-width="' + width + '" ';
 				
-				var theHTML = '<div class="fb-like" data-href="' + S.URL + '" ' + send + layout + action + faces + colorscheme + width + '></div>'; 
+				var whichClass = S.facebook.send == 'only' ? 'fb-send' : 'fb-like';
+				
+				var theHTML = '<div class="' + whichClass + '" data-href="' + S.URL + '" ' + send + layout + action + faces + colorscheme + width + '></div>'; 
 				
 				S.target.find(".facebook_wrap").html(theHTML).addClass('social_inited');
 				
 			},
 		script : function(SOC) {
+				
+				var add_app_id = SOC.FBargs.APP_ID !== undefined ? '&appId=' + SOC.FBargs.APP_ID : '';
 								
 				if($("#fb-root").index() < 0)
-					$("body").append('<div id="fb-root" />');
+					$("body").append('<div id="fb-root" style="position:absolute;top:0px;"></div>');
 					
 				(function(d, s, id) {
 				  var js, fjs = d.getElementsByTagName(s)[0];
 				  if (d.getElementById(id)) return;
 				  js = d.createElement(s); js.id = id;
-				  js.src = "//connect.facebook.net/" + SOC.lang + "/all.js#xfbml=1";
+				  js.src = "//connect.facebook.net/" + SOC.lang + "/all.js#xfbml=1" + add_app_id;
 				  fjs.parentNode.insertBefore(js, fjs);
 				}(document, 'script', 'facebook-jssdk'));
 			
@@ -292,14 +320,15 @@ var socialJS = function(target, parseNow, args) {
 	} //
 	this.twitter = {
 		
-		text : false,
-		via : false,
-		related : false,
-		count : false, // none | horizontal | vertical
-		hashtags : false,
-		size : false, // medium | large
+		text : this.TWargs.text !== undefined ? this.TWargs.text : false,
+		via : this.TWargs.via !== undefined ? this.TWargs.via : false,
+		related : this.TWargs.related !== undefined ? this.TWargs.related : false,
+		count : this.TWargs.count !== undefined ? this.TWargs.count : false, // none | horizontal | vertical
+		hashtags : this.TWargs.hashtags !== undefined ? this.TWargs.hashtags : false,
+		size : this.TWargs.size !== undefined ? this.TWargs.size : false, // medium | large
 		html : function(S) {
-								
+				
+				// turn settings into attr strings ...				
 				var gobalText = S.description ? ' data-text="' + S.description + '" ' : '';
 				var text = S.twitter.text ? ' data-text="' + S.twitter.text + '" ' : gobalText;
 				var via = S.twitter.via ? ' data-via="' + S.twitter.via + '" ' : '';
@@ -327,13 +356,14 @@ var socialJS = function(target, parseNow, args) {
 	} //
 	this.googleplus = {
 				
-		size : false, // small | medium | standard | tall
-		annotation : false, // none | bubble | inline
-		width : false, // 
-		align : false, //
-		expandTo : false, // csv : top, right, left, bottom
+		size : this.GPargs.size !== undefined ? this.GPargs.size : false, // small | medium | standard | tall
+		annotation : this.GPargs.annotation !== undefined ? this.GPargs.annotation : false, // none | bubble | inline
+		width : this.GPargs.width !== undefined ? this.GPargs.width : false, // 
+		align : this.GPargs.align !== undefined ? this.GPargs.align : false, //
+		expandTo : this.GPargs.expandTo !== undefined ? this.GPargs.expandTo : false, // csv : top, right, left, bottom
 		html : function(S) {
-								
+				
+				// turn settings into attr strings ...					
 				var size = S.googleplus.size ?  ' data-size="' + S.googleplus.size + '" ' : ' data-size="medium" ';
 				var annotation = S.googleplus.annotation ?  ' data-annotation="' + S.googleplus.annotation + '" ' : '';
 				var width = S.googleplus.width ?  ' data-size="' + S.googleplus.width + '" ' : '';
@@ -392,12 +422,13 @@ var socialJS = function(target, parseNow, args) {
 	} //
 	this.pinterest = {
 		
-		layout : false,
-		description : false,
+		layout : this.PTargs.layout !== undefined ? this.PTargs.layout : false,
+		description : this.PTargs.description !== undefined ? this.PTargs.description : false,
 		html : function(S) {
 								
-				if(S.IMG !== undefined) {
-								
+				if(S.IMG !== undefined) { // only if an image is defined ...
+					
+					// turn settings into attr strings ...			
 					var layout = S.pinterest.layout ? ' data-pin-config="' + S.pinterest.layout + '" ' : ' data-pin-config="beside" ',
 						count = S.showCount ? layout : ' data-pin-config="none" ',
 						media = S.IMG !== undefined && S.IMG != 'undefined' ? '&media=' + encodeURIComponent( S.IMG ) : '',
